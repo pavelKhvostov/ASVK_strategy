@@ -1,0 +1,20 @@
+# Данные и кэши
+data/
+logs/
+snapshots/
+baseline/stage4/
+dashboard/static/
+*.pyc
+__pycache__/
+
+# Bundled Python (280 MB)
+python/
+
+# Временные файлы pipeline
+pipeline_running.lock
+pipeline_status.json
+_sub_*.tmp
+
+# Windows
+Thumbs.db
+desktop.ini

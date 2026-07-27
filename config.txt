@@ -1,0 +1,8 @@
+# ASVK config — Telegram bot credentials
+# Пусто = TG выключен. Dashboard + Windows toast работают без TG.
+# Если появится VPN на PC1 и захочется вернуть TG — впиши сюда:
+#   TG_TOKEN=<токен_от_@BotFather>
+#   TG_CHAT=<chat_id>
+
+TG_TOKEN=
+TG_CHAT=
