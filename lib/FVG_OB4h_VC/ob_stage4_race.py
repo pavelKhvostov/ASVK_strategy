@@ -65,7 +65,7 @@ def find_latest_events(symbol: str) -> Path:
 def load_1m(csv_path: Path) -> pd.DataFrame:
     df = pd.read_csv(csv_path, usecols=["open_time","high","low","close"])
     dt = pd.to_datetime(df["open_time"], format="ISO8601", utc=True)
-    df["ts_ms"] = dt.astype("datetime64[ns, UTC]").astype("int64") // 1_000_000
+    df["ts_ms"] = dt.astype("datetime64[ms, UTC]").astype("int64")
     df["low"] = df["low"].astype(float)
     df["high"] = df["high"].astype(float)
     df["close"] = df["close"].astype(float)

@@ -116,7 +116,7 @@ def build_fvg_intervals(events: pd.DataFrame, tf: str) -> pd.DataFrame:
     """Возвращает FVG born events + retire_ts для указанного TF."""
     sub = events[(events["tf"] == tf) & (events["element"] == "fvg")]
     born = sub[sub["kind"] == "born"].copy()
-    ret = sub[sub["kind"].isin(["retire","fill_partial"])].sort_values("ts").drop_duplicates("zone_id", keep="first")
+    ret = sub[sub["kind"] == "retire"].sort_values("ts").drop_duplicates("zone_id", keep="first")
     retire_map = dict(zip(ret["zone_id"].values, ret["ts"].values))
     born["retire_ts"] = born["zone_id"].map(retire_map)
     born["born_ts"] = born["ts"]

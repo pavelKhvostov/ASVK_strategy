@@ -1,0 +1,535 @@
+{
+  "baseline_date": "2026-07-28",
+  "sections": {
+    "e12d": {
+      "BTC": {
+        "rows": 2639428,
+        "col0_sum": 4.3596187505019e+18,
+        "col0_name": "ts"
+      },
+      "ETH": {
+        "rows": 2616507,
+        "col0_sum": 4.3217378905032e+18,
+        "col0_name": "ts"
+      },
+      "SOL": {
+        "rows": 1756718,
+        "col0_sum": 2.9714763924315e+18,
+        "col0_name": "ts"
+      }
+    },
+    "s7d": {
+      "BTC": {
+        "rows": 45121672,
+        "col0_sum": 1.3517693456373934e+18,
+        "col0_name": "anchor_ts"
+      },
+      "ETH": {
+        "rows": 37230764,
+        "col0_sum": 6.603736754468546e+18,
+        "col0_name": "anchor_ts"
+      },
+      "SOL": {
+        "rows": 19148697,
+        "col0_sum": -4.2258491608171034e+18,
+        "col0_name": "anchor_ts"
+      }
+    },
+    "fractal12h": {
+      "a_cand_BTC": {
+        "rows": 3170,
+        "col0_sum": 5332481251200000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "b1_BTC": {
+        "rows": 3170,
+        "col0_sum": 5332481251200000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "b2_BTC": {
+        "rows": 3170,
+        "col0_sum": 5332481251200000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "b3_BTC": {
+        "rows": 1868,
+        "col0_sum": 3142576526400000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "b4_BTC": {
+        "rows": 1868,
+        "col0_sum": 3142576526400000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "b5_BTC": {
+        "rows": 3170,
+        "col0_sum": 5332481251200000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "b8_BTC": {
+        "rows": 2076,
+        "col0_sum": 3492722332800000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "b9_BTC": {
+        "rows": 3170,
+        "col0_sum": 5332481251200000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "a_cand_ETH": {
+        "rows": 3164,
+        "col0_sum": 5318243481600000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "b1_ETH": {
+        "rows": 3164,
+        "col0_sum": 5318243481600000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "b2_ETH": {
+        "rows": 3164,
+        "col0_sum": 5318243481600000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "b3_ETH": {
+        "rows": 1859,
+        "col0_sum": 3125409364800000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "b4_ETH": {
+        "rows": 1859,
+        "col0_sum": 3125409364800000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "b5_ETH": {
+        "rows": 3164,
+        "col0_sum": 5318243481600000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "b8_ETH": {
+        "rows": 2071,
+        "col0_sum": 3480408777600000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "b9_ETH": {
+        "rows": 3164,
+        "col0_sum": 5318243481600000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "a_cand_SOL": {
+        "rows": 2980,
+        "col0_sum": 5039144784000000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "b1_SOL": {
+        "rows": 2980,
+        "col0_sum": 5039144784000000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "b2_SOL": {
+        "rows": 2980,
+        "col0_sum": 5039144784000000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "b3_SOL": {
+        "rows": 1740,
+        "col0_sum": 2943352339200000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "b4_SOL": {
+        "rows": 1740,
+        "col0_sum": 2943352339200000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "b5_SOL": {
+        "rows": 2980,
+        "col0_sum": 5039144784000000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "b8_SOL": {
+        "rows": 1940,
+        "col0_sum": 3281634172800000.0,
+        "col0_name": "pivot_open_ts_ms"
+      },
+      "b9_SOL": {
+        "rows": 2980,
+        "col0_sum": 5039144784000000.0,
+        "col0_name": "pivot_open_ts_ms"
+      }
+    },
+    "ob_stage4": {
+      "liq_ob4h_vc/canonical_BTC": {
+        "rows": 306,
+        "col0_sum": 508552776000000.0,
+        "col0_name": "ob_ts"
+      },
+      "liq_ob4h_vc/sweep_only_BTC": {
+        "rows": 100,
+        "col0_sum": 164443867200000.0,
+        "col0_name": "ob_ts"
+      },
+      "liq_ob4h_vc/canonical_ETH": {
+        "rows": 256,
+        "col0_sum": 424813881600000.0,
+        "col0_name": "ob_ts"
+      },
+      "liq_ob4h_vc/sweep_only_ETH": {
+        "rows": 70,
+        "col0_sum": 115719796800000.0,
+        "col0_name": "ob_ts"
+      },
+      "liq_ob4h_vc/canonical_SOL": {
+        "rows": 171,
+        "col0_sum": 290145744000000.0,
+        "col0_name": "ob_ts"
+      },
+      "liq_ob4h_vc/sweep_only_SOL": {
+        "rows": 42,
+        "col0_sum": 71386718400000.0,
+        "col0_name": "ob_ts"
+      },
+      "fvg_ob4h_vc/canonical_BTC": {
+        "rows": 106,
+        "col0_sum": 176215492800000.0,
+        "col0_name": "ob_ts"
+      },
+      "fvg_ob4h_vc/sweep_only_BTC": {
+        "rows": 106,
+        "col0_sum": 176215492800000.0,
+        "col0_name": "ob_ts"
+      },
+      "fvg_ob4h_vc/canonical_ETH": {
+        "rows": 77,
+        "col0_sum": 128235182400000.0,
+        "col0_name": "ob_ts"
+      },
+      "fvg_ob4h_vc/sweep_only_ETH": {
+        "rows": 77,
+        "col0_sum": 128235182400000.0,
+        "col0_name": "ob_ts"
+      },
+      "fvg_ob4h_vc/canonical_SOL": {
+        "rows": 74,
+        "col0_sum": 125919374400000.0,
+        "col0_name": "ob_ts"
+      },
+      "fvg_ob4h_vc/sweep_only_SOL": {
+        "rows": 74,
+        "col0_sum": 125919374400000.0,
+        "col0_name": "ob_ts"
+      },
+      "liq_ob1h_vc/canonical_BTC": {
+        "rows": 1371,
+        "col0_sum": 2267598492000000.0,
+        "col0_name": "ob_ts"
+      },
+      "liq_ob1h_vc/sweep_only_BTC": {
+        "rows": 400,
+        "col0_sum": 653493337200000.0,
+        "col0_name": "ob_ts"
+      },
+      "liq_ob1h_vc/canonical_ETH": {
+        "rows": 1281,
+        "col0_sum": 2122553156400000.0,
+        "col0_name": "ob_ts"
+      },
+      "liq_ob1h_vc/sweep_only_ETH": {
+        "rows": 387,
+        "col0_sum": 633841228800000.0,
+        "col0_name": "ob_ts"
+      },
+      "liq_ob1h_vc/canonical_SOL": {
+        "rows": 902,
+        "col0_sum": 1528629051600000.0,
+        "col0_name": "ob_ts"
+      },
+      "liq_ob1h_vc/sweep_only_SOL": {
+        "rows": 245,
+        "col0_sum": 413932960800000.0,
+        "col0_name": "ob_ts"
+      },
+      "fvg_ob1h_vc/canonical_BTC": {
+        "rows": 379,
+        "col0_sum": 628504236000000.0,
+        "col0_name": "ob_ts"
+      },
+      "fvg_ob1h_vc/sweep_only_BTC": {
+        "rows": 379,
+        "col0_sum": 628504236000000.0,
+        "col0_name": "ob_ts"
+      },
+      "fvg_ob1h_vc/canonical_ETH": {
+        "rows": 344,
+        "col0_sum": 567081694800000.0,
+        "col0_name": "ob_ts"
+      },
+      "fvg_ob1h_vc/sweep_only_ETH": {
+        "rows": 344,
+        "col0_sum": 567081694800000.0,
+        "col0_name": "ob_ts"
+      },
+      "fvg_ob1h_vc/canonical_SOL": {
+        "rows": 271,
+        "col0_sum": 458381916000000.0,
+        "col0_name": "ob_ts"
+      },
+      "fvg_ob1h_vc/sweep_only_SOL": {
+        "rows": 271,
+        "col0_sum": 458381916000000.0,
+        "col0_name": "ob_ts"
+      }
+    },
+    "patterns": {
+      "ascending_triangle_BTC": {
+        "rows": 38,
+        "col0_sum": 65346051600000.0,
+        "col0_name": "signal_ts"
+      },
+      "ascending_triangle_ETH": {
+        "rows": 24,
+        "col0_sum": 40576410000000.0,
+        "col0_name": "signal_ts"
+      },
+      "ascending_triangle_SOL": {
+        "rows": 18,
+        "col0_sum": 30712597200000.0,
+        "col0_name": "signal_ts"
+      },
+      "bat_BTC": {
+        "rows": 180,
+        "col0_sum": 304120911600000.0,
+        "col0_name": "signal_ts"
+      },
+      "bat_ETH": {
+        "rows": 225,
+        "col0_sum": 379357333200000.0,
+        "col0_name": "signal_ts"
+      },
+      "bat_SOL": {
+        "rows": 219,
+        "col0_sum": 371019895200000.0,
+        "col0_name": "signal_ts"
+      },
+      "bat_long_SOL": {
+        "rows": 223,
+        "col0_sum": 375817104000000.0,
+        "col0_name": "signal_ts"
+      },
+      "butterfly_BTC": {
+        "rows": 217,
+        "col0_sum": 366092085600000.0,
+        "col0_name": "signal_ts"
+      },
+      "butterfly_ETH": {
+        "rows": 201,
+        "col0_sum": 336496644000000.0,
+        "col0_name": "signal_ts"
+      },
+      "butterfly_SOL": {
+        "rows": 161,
+        "col0_sum": 271214589600000.0,
+        "col0_name": "signal_ts"
+      },
+      "butterfly_long_SOL": {
+        "rows": 175,
+        "col0_sum": 293509332000000.0,
+        "col0_name": "signal_ts"
+      },
+      "crab_BTC": {
+        "rows": 128,
+        "col0_sum": 217558382400000.0,
+        "col0_name": "signal_ts"
+      },
+      "crab_ETH": {
+        "rows": 152,
+        "col0_sum": 254284984800000.0,
+        "col0_name": "signal_ts"
+      },
+      "crab_SOL": {
+        "rows": 144,
+        "col0_sum": 244334685600000.0,
+        "col0_name": "signal_ts"
+      },
+      "crab_long_SOL": {
+        "rows": 121,
+        "col0_sum": 204099159600000.0,
+        "col0_name": "signal_ts"
+      },
+      "descending_triangle_BTC": {
+        "rows": 29,
+        "col0_sum": 49821102000000.0,
+        "col0_name": "signal_ts"
+      },
+      "descending_triangle_ETH": {
+        "rows": 18,
+        "col0_sum": 30419128800000.0,
+        "col0_name": "signal_ts"
+      },
+      "descending_triangle_SOL": {
+        "rows": 14,
+        "col0_sum": 23791190400000.0,
+        "col0_name": "signal_ts"
+      },
+      "falling_channel_SOL": {
+        "rows": 40,
+        "col0_sum": 68074513200000.0,
+        "col0_name": "signal_ts"
+      },
+      "falling_wedge_ETH": {
+        "rows": 177,
+        "col0_sum": 299197656000000.0,
+        "col0_name": "signal_ts"
+      },
+      "falling_wedge_SOL": {
+        "rows": 145,
+        "col0_sum": 243779320800000.0,
+        "col0_name": "signal_ts"
+      },
+      "gartley_BTC": {
+        "rows": 276,
+        "col0_sum": 463333676400000.0,
+        "col0_name": "signal_ts"
+      },
+      "gartley_ETH": {
+        "rows": 335,
+        "col0_sum": 562499175600000.0,
+        "col0_name": "signal_ts"
+      },
+      "gartley_SOL": {
+        "rows": 289,
+        "col0_sum": 487313546400000.0,
+        "col0_name": "signal_ts"
+      },
+      "gartley_long_SOL": {
+        "rows": 294,
+        "col0_sum": 495377550000000.0,
+        "col0_name": "signal_ts"
+      },
+      "hs_bottom_SOL": {
+        "rows": 75,
+        "col0_sum": 127333386000000.0,
+        "col0_name": "signal_ts"
+      },
+      "hs_BTC": {
+        "rows": 128,
+        "col0_sum": 217074330000000.0,
+        "col0_name": "signal_ts"
+      },
+      "hs_ETH": {
+        "rows": 101,
+        "col0_sum": 170816976000000.0,
+        "col0_name": "signal_ts"
+      },
+      "hs_SOL": {
+        "rows": 74,
+        "col0_sum": 126725446800000.0,
+        "col0_name": "signal_ts"
+      },
+      "patterns_SOL": {
+        "rows": 2501,
+        "col0_sum": 4231355144400000.0,
+        "col0_name": "signal_ts"
+      },
+      "rectangle_bottom_SOL": {
+        "rows": 16,
+        "col0_sum": 27500680800000.0,
+        "col0_name": "signal_ts"
+      },
+      "rectangle_top_BTC": {
+        "rows": 142,
+        "col0_sum": 241282461600000.0,
+        "col0_name": "signal_ts"
+      },
+      "rectangle_top_ETH": {
+        "rows": 50,
+        "col0_sum": 85441287600000.0,
+        "col0_name": "signal_ts"
+      },
+      "rectangle_top_SOL": {
+        "rows": 4,
+        "col0_sum": 6945825600000.0,
+        "col0_name": "signal_ts"
+      },
+      "rising_channel_BTC": {
+        "rows": 108,
+        "col0_sum": 182834323200000.0,
+        "col0_name": "signal_ts"
+      },
+      "rising_channel_ETH": {
+        "rows": 70,
+        "col0_sum": 118562252400000.0,
+        "col0_name": "signal_ts"
+      },
+      "rising_channel_SOL": {
+        "rows": 37,
+        "col0_sum": 63573516000000.0,
+        "col0_name": "signal_ts"
+      },
+      "rising_wedge_BTC": {
+        "rows": 272,
+        "col0_sum": 459653011200000.0,
+        "col0_name": "signal_ts"
+      },
+      "rising_wedge_ETH": {
+        "rows": 240,
+        "col0_sum": 404451464400000.0,
+        "col0_name": "signal_ts"
+      },
+      "rising_wedge_SOL": {
+        "rows": 144,
+        "col0_sum": 246107476800000.0,
+        "col0_name": "signal_ts"
+      },
+      "sym_triangle_BTC": {
+        "rows": 190,
+        "col0_sum": 319990824000000.0,
+        "col0_name": "signal_ts"
+      },
+      "sym_triangle_ETH": {
+        "rows": 184,
+        "col0_sum": 308306397600000.0,
+        "col0_name": "signal_ts"
+      },
+      "sym_triangle_SOL": {
+        "rows": 128,
+        "col0_sum": 216801860400000.0,
+        "col0_name": "signal_ts"
+      },
+      "sym_triangle_long_BTC": {
+        "rows": 61,
+        "col0_sum": 102222403200000.0,
+        "col0_name": "signal_ts"
+      },
+      "sym_triangle_long_ETH": {
+        "rows": 86,
+        "col0_sum": 144118490400000.0,
+        "col0_name": "signal_ts"
+      },
+      "sym_triangle_long_SOL": {
+        "rows": 86,
+        "col0_sum": 145187866800000.0,
+        "col0_name": "signal_ts"
+      },
+      "triple_bottom_SOL": {
+        "rows": 39,
+        "col0_sum": 67301136000000.0,
+        "col0_name": "signal_ts"
+      },
+      "triple_top_BTC": {
+        "rows": 233,
+        "col0_sum": 396652834800000.0,
+        "col0_name": "signal_ts"
+      },
+      "triple_top_ETH": {
+        "rows": 148,
+        "col0_sum": 251151732000000.0,
+        "col0_name": "signal_ts"
+      },
+      "triple_top_SOL": {
+        "rows": 55,
+        "col0_sum": 94834465200000.0,
+        "col0_name": "signal_ts"
+      }
+    }
+  }
+}
