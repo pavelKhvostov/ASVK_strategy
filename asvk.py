@@ -519,19 +519,23 @@ OB4H_ALGOS = [("L4h", "liq_ob4h_vc"), ("F4h", "fvg_ob4h_vc")]
 OB1H_ALGOS = [("L1h", "liq_ob1h_vc"), ("F1h", "fvg_ob1h_vc")]
 
 
-def _read_ob_signals(algos: list[tuple[str, str]], limit: int, empty_hint: str) -> list[str]:
+def _read_ob_signals(algos: list[tuple[str, str]], limit: int, empty_hint: str) -> tuple[str, list[str]]:
     """Собрать canonical setups (Liq/FVG race) × BTC/ETH/SOL для заданного набора algo/folder.
     Sorted по ob_ts (birth) desc, top limit.
-    Формат: {ob_ts YYYY-MM-DD HH:MM} — {algo} · {sym} · {DIR} · VC:{types} {first_vc_ts MM-DD HH:MM}"""
+    Возвращает (header_line, signal_lines)."""
     import pandas as pd
     rows = []  # (ob_ts, first_vc_ts, algo, sym, direction, vc_types_str)
     _debug_paths = []
+    last_mtime = 0.0
+    sym_counts: dict[str, int] = {"BTC": 0, "ETH": 0, "SOL": 0}
     for algo, folder in algos:
         for sym in SYMBOLS:
             s = sym.replace("USDT", "")
             parquet = BASE / "data" / folder / f"ob_stage4_race_canonical_{s}.parquet"
             _debug_paths.append(f"{parquet}={parquet.exists()}")
             if not parquet.exists(): continue
+            mt = parquet.stat().st_mtime
+            if mt > last_mtime: last_mtime = mt
             try:
                 df = pd.read_parquet(parquet, columns=["ob_ts","direction","vc_rb","vc_fvg","vc_snr","vc_any","vc_rb_ts","vc_fvg_ts","vc_snr_ts"])
                 _debug_paths.append(f"  READ len={len(df)} vc_any={(df['vc_any']==True).sum()}")
@@ -542,6 +546,7 @@ def _read_ob_signals(algos: list[tuple[str, str]], limit: int, empty_hint: str) 
             if len(df) == 0:
                 _debug_paths.append(f"  FILTERED to 0")
                 continue
+            sym_counts[s] += len(df)
             df = df.sort_values("ob_ts", ascending=False).head(limit)
             for _, r in df.iterrows():
                 vc_types = []
@@ -560,15 +565,20 @@ def _read_ob_signals(algos: list[tuple[str, str]], limit: int, empty_hint: str) 
             encoding="utf-8")
     except Exception:
         pass
+    if last_mtime == 0.0:
+        return f"Signals  [dim]— {empty_hint} —[/]", []
+    run_dt = datetime.fromtimestamp(last_mtime, tz=MSK).strftime("%H:%M %Y-%m-%d MSK")
+    parts = [f"{s} {sym_counts.get(s, 0)}" for s in ("BTC", "ETH", "SOL")]
+    header = f"Signals  [cyan]{run_dt}[/]  {'  ·  '.join(parts)}"
     if not rows:
-        return [f"Signals  [dim]— {empty_hint} —[/]"]
+        return header, []
     lines = []
     for ob_ts, vc_ts, algo, sym, dir_, vcs in rows:
         ob_dt = datetime.fromtimestamp(ob_ts/1000, tz=MSK).strftime("%Y-%m-%d %H:%M")
         vc_dt = datetime.fromtimestamp(vc_ts/1000, tz=MSK).strftime("%m-%d %H:%M") if vc_ts else "--"
         dir_str = "[green]LONG [/]" if dir_ == "long" else "[red]SHORT[/]"
         lines.append(f"  {ob_dt} — {algo} · {sym} · {dir_str} · VC:{vcs} {vc_dt}")
-    return lines
+    return header, lines
 
 
 def read_ob4h_signals(limit: int = 15) -> list[str]:
@@ -584,38 +594,45 @@ def read_ob1h_signals(limit: int = 15) -> list[str]:
 _FRACTAL_COND_RE = re.compile(r"^b\d+c\d+$")
 
 
-def read_latest_fractal_signals(limit: int = 15) -> list[str]:
+def read_latest_fractal_signals(limit: int = 15) -> tuple[str, list[str]]:
     """Собрать basket (B1∪B9) hits 12h-фрактал стратегии × BTC/ETH/SOL.
-    Sorted по pivot_open_ts_ms (birth) desc, top limit.
-    Формат: {pivot_ts YYYY-MM-DD HH:MM} — {sym} · {DIR} · {conditions} · {status}
-    conditions — КАЖДОЕ сработавшее под-условие (B1C1, B9C2, ...), не просто блок,
-    т.к. на один сигнал может сработать сразу несколько условий (в т.ч. из разных блоков)."""
+    Возвращает (header_line, signal_lines)."""
     import pandas as pd
     fractal_dir = BASE / "data" / "fractal12h"
     rows = []  # (pivot_ts, sym, direction, conditions_str, confirmable, confirmed)
+    last_mtime = 0.0
+    sym_counts: dict[str, int] = {"BTC": 0, "ETH": 0, "SOL": 0}
     for sym in SYMBOLS:
         s = sym.replace("USDT", "")
         candidates = sorted(fractal_dir.glob(f"basket_hits_{s}_*.parquet"),
                             key=lambda p: p.stat().st_mtime)
         if not candidates:
             continue
+        mt = candidates[-1].stat().st_mtime
+        if mt > last_mtime: last_mtime = mt
         try:
             df = pd.read_parquet(candidates[-1])
         except Exception:
             continue
         cond_cols = sorted(c for c in df.columns if _FRACTAL_COND_RE.match(c))
-        df = df[df["basket_hit"] == True]
-        if len(df) == 0:
+        df_hit = df[df["basket_hit"] == True]
+        sym_counts[s] = len(df_hit)
+        if len(df_hit) == 0:
             continue
-        df = df.sort_values("pivot_open_ts_ms", ascending=False).head(limit)
-        for _, r in df.iterrows():
+        df_hit = df_hit.sort_values("pivot_open_ts_ms", ascending=False).head(limit)
+        for _, r in df_hit.iterrows():
             fired = [c.upper() for c in cond_cols if bool(r.get(c, False))]
             rows.append((int(r["pivot_open_ts_ms"]), s, str(r["direction"]),
                         "+".join(fired) or "-", bool(r["confirmable"]), bool(r["confirmed"])))
     rows.sort(key=lambda x: x[0], reverse=True)
     rows = rows[:limit]
+    if last_mtime == 0.0:
+        return "Signals  [dim]— первый прогон fractal12h ещё не завершен —[/]", []
+    run_dt = datetime.fromtimestamp(last_mtime, tz=MSK).strftime("%H:%M %Y-%m-%d MSK")
+    parts = [f"{s} {sym_counts.get(s, 0)}" for s in ("BTC", "ETH", "SOL")]
+    header = f"Signals  [cyan]{run_dt}[/]  {'  ·  '.join(parts)}"
     if not rows:
-        return ["Signals  [dim]— пока пусто (первый прогон fractal12h ещё не закончен) —[/]"]
+        return header, []
     lines = []
     for pivot_ts, sym, dir_, conditions, confirmable, confirmed in rows:
         pivot_dt = datetime.fromtimestamp(pivot_ts/1000, tz=MSK).strftime("%Y-%m-%d %H:%M")
@@ -627,22 +644,25 @@ def read_latest_fractal_signals(limit: int = 15) -> list[str]:
         else:
             status = "[dim]FAILED[/]"
         lines.append(f"  {pivot_dt} — {sym} · {dir_str} · {conditions} · {status}")
-    return lines
+    return header, lines
 
 
-def read_latest_pattern_signals(limit: int = 15) -> list[str]:
+def read_latest_pattern_signals(limit: int = 15) -> tuple[str, list[str]]:
     """Собрать patterns_hits (22 паттерна Block 5) × BTC/ETH/SOL.
-    Sorted по signal_ts desc, top limit.
-    Формат: {signal_dt YYYY-MM-DD HH:MM} — {sym} · {DIR} · {pattern} · {status}"""
+    Возвращает (header_line, signal_lines)."""
     import pandas as pd
     patterns_dir = BASE / "data" / "patterns"
     syms = [s.replace("USDT", "") for s in SYMBOLS]
     rows = []
+    last_mtime = 0.0
+    sym_counts: dict[str, int] = {s: 0 for s in syms}
     for sym in syms:
         candidates = sorted(patterns_dir.glob(f"patterns_hits_{sym}_*.parquet"),
                             key=lambda p: p.stat().st_mtime)
         if not candidates:
             continue
+        mt = candidates[-1].stat().st_mtime
+        if mt > last_mtime: last_mtime = mt
         try:
             df = pd.read_parquet(candidates[-1])
         except Exception:
@@ -650,11 +670,17 @@ def read_latest_pattern_signals(limit: int = 15) -> list[str]:
         if len(df) == 0:
             continue
         df = df.drop_duplicates(subset=["signal_ts", "direction", "pattern", "status"])
+        sym_counts[sym] = len(df)
         for _, r in df.iterrows():
             rows.append((int(r["signal_ts"]), sym, str(r["direction"]),
                          str(r["pattern"]), str(r["status"])))
+    if last_mtime == 0.0:
+        return "Signals  [dim]— первый прогон patterns ещё не завершен —[/]", []
+    run_dt = datetime.fromtimestamp(last_mtime, tz=MSK).strftime("%H:%M %Y-%m-%d MSK")
+    parts = [f"{s} {sym_counts.get(s, 0)}" for s in syms]
+    header = f"Signals  [cyan]{run_dt}[/]  {'  ·  '.join(parts)}"
     if not rows:
-        return ["Signals  [dim]— пока пусто (первый прогон patterns ещё не закончен) —[/]"]
+        return header, []
     rows.sort(key=lambda x: x[0], reverse=True)
     rows = rows[:limit]
     lines = []
@@ -669,7 +695,7 @@ def read_latest_pattern_signals(limit: int = 15) -> list[str]:
         else:
             status_str = "[dim]FAILED[/]"
         lines.append(f"  {signal_dt} — {sym} · {dir_str} · {pat_str} · {status_str}")
-    return lines
+    return header, lines
 
 
 def render():
@@ -712,29 +738,29 @@ def render():
                          title=f"[bold cyan]{now_msk}[/]", title_align="right")
 
     # ── Блок 2: 12h-фрактал (A-фильтры + B1..B9) ──
-    fractal_lines = read_latest_fractal_signals(limit=15)
-    fractal_content = Group(Text.from_markup("Signals:"),
+    fractal_header, fractal_lines = read_latest_fractal_signals(limit=15)
+    fractal_content = Group(Text.from_markup(fractal_header),
                             *[Text.from_markup(sl) for sl in fractal_lines])
     panel_block2 = Panel(fractal_content, border_style="cyan",
                          title="[bold cyan]FRACTAL 12h · BTC/ETH/SOL[/]", title_align="right")
 
     # ── Блок 3: Liq_OB4h_VC + FVG_OB4h_VC ──
-    ob4h_lines = read_ob4h_signals(limit=15)
-    ob4h_content = Group(Text.from_markup("Signals:"),
+    ob4h_header, ob4h_lines = read_ob4h_signals(limit=15)
+    ob4h_content = Group(Text.from_markup(ob4h_header),
                          *[Text.from_markup(sl) for sl in ob4h_lines])
     panel_block3 = Panel(ob4h_content, border_style="cyan",
                          title="[bold cyan]Volume Confirmation 4h · BTC/ETH/SOL[/]", title_align="right")
 
     # ── Блок 4: Liq_OB1h_VC + FVG_OB1h_VC ──
-    ob1h_lines = read_ob1h_signals(limit=15)
-    ob1h_content = Group(Text.from_markup("Signals:"),
+    ob1h_header, ob1h_lines = read_ob1h_signals(limit=15)
+    ob1h_content = Group(Text.from_markup(ob1h_header),
                          *[Text.from_markup(sl) for sl in ob1h_lines])
     panel_block4 = Panel(ob1h_content, border_style="cyan",
                          title="[bold cyan]Volume Confirmation 1h · BTC/ETH/SOL[/]", title_align="right")
 
     # ── Блок 5: паттерны (H&S TOP + Wedge falling) ──
-    pattern_lines = read_latest_pattern_signals(limit=15)
-    pattern_content = Group(Text.from_markup("Signals:"),
+    pattern_header, pattern_lines = read_latest_pattern_signals(limit=15)
+    pattern_content = Group(Text.from_markup(pattern_header),
                             *[Text.from_markup(sl) for sl in pattern_lines])
     panel_block5 = Panel(pattern_content, border_style="cyan",
                          title="[bold cyan]PATTERNS 1h · BTC/ETH/SOL[/]", title_align="right")
