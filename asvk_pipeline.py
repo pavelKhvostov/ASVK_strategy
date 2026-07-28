@@ -362,7 +362,7 @@ def block5_patterns(status: dict, end_date: str, now_msk: datetime, force: bool 
         (run_step,
          PATTERNS_DIR / "run_patterns.py",
          ["--symbol", sym, "--start", "2020-01-01", "--end", end_date],
-         status, f"patterns_{sym}", f"patterns {sym}", 120)
+         status, f"patterns_{sym}", f"patterns {sym}", 2400)
         for sym in SYMBOLS
     ]
     _run_parallel(tasks, "patterns")
