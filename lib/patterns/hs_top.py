@@ -320,9 +320,9 @@ def apply_canon_filters(geo_patterns: list[dict], t_arr: np.ndarray,
         i_br = p['i_breakout']
         i_rs = p['i_rs']
 
-        # 2) Bearish FVG inline: low[i-1] > high[i+1] в окне (RS, BR+2] — канон scan_hs_top.py
+        # 2) Bearish FVG inline: low[i-1] > high[i+1] в окне (RS, BR) — строго до BR
         fvg_ok = False
-        for i_fvg in range(i_rs + 1, min(n_bars - 1, i_br + 3)):
+        for i_fvg in range(i_rs + 1, min(n_bars - 1, i_br)):
             if 0 < i_fvg < n_bars - 1:
                 if l_arr[i_fvg - 1] > h_arr[i_fvg + 1]:
                     fvg_ok = True; break

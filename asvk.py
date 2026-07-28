@@ -669,11 +669,10 @@ def read_latest_pattern_signals(limit: int = 15) -> tuple[str, list[str]]:
             continue
         if len(df) == 0:
             continue
-        df = df.drop_duplicates(subset=["signal_ts", "direction", "pattern", "status"])
+        df = df.drop_duplicates(subset=["signal_ts", "direction", "pattern"])
         sym_counts[sym] = len(df)
         for _, r in df.iterrows():
-            rows.append((int(r["signal_ts"]), sym, str(r["direction"]),
-                         str(r["pattern"]), str(r["status"])))
+            rows.append((int(r["signal_ts"]), sym, str(r["direction"]), str(r["pattern"])))
     if last_mtime == 0.0:
         return "Signals  [dim]— первый прогон patterns ещё не завершен —[/]", []
     run_dt = datetime.fromtimestamp(last_mtime, tz=MSK).strftime("%H:%M %Y-%m-%d MSK")
@@ -684,17 +683,11 @@ def read_latest_pattern_signals(limit: int = 15) -> tuple[str, list[str]]:
     rows.sort(key=lambda x: x[0], reverse=True)
     rows = rows[:limit]
     lines = []
-    for sig_ts, sym, direction, pattern, status in rows:
+    for sig_ts, sym, direction, pattern in rows:
         signal_dt = datetime.fromtimestamp(sig_ts / 1000, tz=MSK).strftime("%Y-%m-%d %H:%M")
         dir_str = "[green]LONG [/]" if direction == "long" else "[red]SHORT[/]"
         pat_str = pattern.upper()
-        if status == "CONFIRMED":
-            status_str = "[green]CONFIRMED[/]"
-        elif status == "PENDING":
-            status_str = "[yellow]PENDING[/]"
-        else:
-            status_str = "[dim]FAILED[/]"
-        lines.append(f"  {signal_dt} — {sym} · {dir_str} · {pat_str} · {status_str}")
+        lines.append(f"  {signal_dt} — {sym} · {dir_str} · {pat_str}")
     return header, lines
 
 

@@ -26,6 +26,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+from typing import Optional
 
 ASVK_BASE = Path(__file__).resolve().parent
 PYTHON_EXE = ASVK_BASE / "python" / "python.exe"
@@ -208,7 +209,7 @@ def block1_data_and_indicators(status: dict, end_date: str):
 
 # ══════════════════════════ Блок 2: 12h-фрактал ══════════════════════════
 
-def _cold_start_flags(now_msk: datetime) -> tuple[bool, bool]:
+def _cold_start_flags(now_msk: datetime, prev_finished_at: Optional[str] = None) -> tuple[bool, bool]:
     """Определяет нужен ли принудительный запуск заблокированных по времени блоков.
 
     Возвращает (force_hourly, force_12h):
@@ -223,27 +224,21 @@ def _cold_start_flags(now_msk: datetime) -> tuple[bool, bool]:
     force_hourly = False
     force_12h = False
     try:
-        if STATUS_FILE.exists():
-            prev = json.loads(STATUS_FILE.read_text(encoding="utf-8"))
-            finished_str = prev.get("finished_at")
-            if finished_str:
-                finished = datetime.fromisoformat(finished_str)
-                downtime_s = (now_msk - finished).total_seconds()
-                if downtime_s > 20 * 60:
-                    force_hourly = True
-                    log(f"  cold-start: {downtime_s/60:.0f} мин простоя → force_hourly блоки 3/5")
-                if downtime_s > 12 * 3600:
-                    force_12h = True
-                    log(f"  cold-start: {downtime_s/3600:.1f}h простоя → force_12h блок 2")
-            else:
-                force_hourly = force_12h = True
-                log("  cold-start: нет finished_at → force all gates")
+        if prev_finished_at:
+            finished = datetime.fromisoformat(prev_finished_at)
+            downtime_s = (now_msk - finished).total_seconds()
+            if downtime_s > 20 * 60:
+                force_hourly = True
+                log(f"  cold-start: {downtime_s/60:.0f} мин простоя → force_hourly блоки 3/5")
+            if downtime_s > 12 * 3600:
+                force_12h = True
+                log(f"  cold-start: {downtime_s/3600:.1f}h простоя → force_12h блок 2")
         else:
             force_hourly = force_12h = True
-            log("  cold-start: нет pipeline_status.json → force all gates")
+            log("  cold-start: нет предыдущего finished_at → force all gates")
     except Exception as e:
         force_hourly = force_12h = True
-        log(f"  cold-start: ошибка чтения статуса ({e}) → force all gates")
+        log(f"  cold-start: ошибка ({e}) → force all gates")
 
     fractal_dir = DATA_DIR / "fractal12h"
     if not fractal_dir.exists() or not any(fractal_dir.glob("basket_hits_BTC_*.parquet")):
@@ -412,6 +407,26 @@ def finalize(status: dict, global_t0: float) -> int:
 
 def main():
     global_t0 = time.time()
+
+    # Cleanup orphan .tmp files from any previously killed run
+    logs_dir = ASVK_BASE / "logs"
+    for p in logs_dir.glob("_sub_*.tmp"):
+        try: p.unlink()
+        except Exception: pass
+
+    # Rotate pipeline.log if >5 MB
+    if LOG_FILE.exists() and LOG_FILE.stat().st_size > 5 * 1024 * 1024:
+        LOG_FILE.rename(LOG_FILE.with_suffix(".log.1"))
+
+    # Read prev finished_at BEFORE overwriting status (write_status below clears it)
+    prev_finished_at: Optional[str] = None
+    try:
+        if STATUS_FILE.exists():
+            prev = json.loads(STATUS_FILE.read_text(encoding="utf-8"))
+            prev_finished_at = prev.get("finished_at")
+    except Exception:
+        pass
+
     started_at = datetime.now(MSK).isoformat()
     end_date = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d")
     now_utc = datetime.now(timezone.utc)
@@ -426,7 +441,7 @@ def main():
 
     # Блоки 2/3/4/5 не зависят от вывода друг друга — запускаем параллельно
     # Cold-start: если демон только запустился или долго не работал — форсируем gate-блоки
-    force_hourly, force_12h = _cold_start_flags(now_msk)
+    force_hourly, force_12h = _cold_start_flags(now_msk, prev_finished_at)
     log("═══ Блоки 2/3/4/5: параллельный старт ═══")
     _run_parallel([
         (block2_fractal12h, status, end_date, now_utc, force_12h),

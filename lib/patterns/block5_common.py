@@ -77,13 +77,13 @@ def apply_fvg_ma_filter(patterns: list[dict], t_arr: np.ndarray, closes: np.ndar
                          hma_mhull: np.ndarray, hma_shull: np.ndarray, wma50: np.ndarray,
                          stats: dict, use_2a: bool = True, use_2c: bool = True,
                          use_2d: bool = True) -> list[dict]:
-    """FVG(2) inline bearish + MA SHORT-фильтр. FVG: l[i-1]>h[i+1] в (fvg_from, i_br+3]."""
+    """FVG(2) inline bearish + MA SHORT-фильтр. FVG: l[i-1]>h[i+1] в (fvg_from, i_br)."""
     out = []
     for p in patterns:
         i_from = p[fvg_from_key]
         i_br = p[i_br_key]
         fvg_ok = False
-        for i_fvg in range(i_from + 1, min(n_bars - 1, i_br + 3)):
+        for i_fvg in range(i_from + 1, min(n_bars - 1, i_br)):
             if 0 < i_fvg < n_bars - 1:
                 if l_arr[i_fvg - 1] > h_arr[i_fvg + 1]:
                     fvg_ok = True; break
@@ -125,13 +125,13 @@ def apply_fvg_ma_filter_long(patterns: list[dict], t_arr: np.ndarray, closes: np
                                hma_mhull: np.ndarray, hma_shull: np.ndarray, wma50: np.ndarray,
                                stats: dict, use_2a: bool = True, use_2c: bool = True,
                                use_2d: bool = True) -> list[dict]:
-    """FVG(2) inline bullish + MA LONG-фильтр. FVG: h[i-1]<l[i+1] в (fvg_from, i_br+3]."""
+    """FVG(2) inline bullish + MA LONG-фильтр. FVG: h[i-1]<l[i+1] в (fvg_from, i_br)."""
     out = []
     for p in patterns:
         i_from = p[fvg_from_key]
         i_br = p[i_br_key]
         fvg_ok = False
-        for i_fvg in range(i_from + 1, min(n_bars - 1, i_br + 3)):
+        for i_fvg in range(i_from + 1, min(n_bars - 1, i_br)):
             if 0 < i_fvg < n_bars - 1:
                 if h_arr[i_fvg - 1] < l_arr[i_fvg + 1]:
                     fvg_ok = True; break
