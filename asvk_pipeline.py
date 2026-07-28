@@ -12,13 +12,18 @@ Block structure (matches daemon TUI panels 1:1):
     Блок 5 — Паттерны (H&S TOP + Wedge falling)
 Блоки только переставлены/сгруппированы; каждый шаг внутри вызывает тот же
 скрипт с теми же аргументами, что и раньше — поведение не менялось.
+
+Блоки 2/3/4/5 независимы от вывода друг друга — запускаются параллельно.
+Символы BTC/ETH/SOL независимы внутри каждого блока — тоже параллельно.
 """
 from __future__ import annotations
 import json
 import os
 import subprocess
 import sys
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -54,13 +59,17 @@ for d in [EVENTS_DIR, S7D_DIR, SNAPSHOTS_DIR, LOG_FILE.parent]:
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
+# Lock for thread-safe log and status writes
+_WRITE_LOCK = threading.Lock()
+
 
 def log(msg: str):
     ts = datetime.now(MSK).strftime("%Y-%m-%d %H:%M:%S")
     line = f"[{ts} MSK] {msg}"
     print(line, flush=True)
-    with LOG_FILE.open("a", encoding="utf-8") as f:
-        f.write(line + "\n")
+    with _WRITE_LOCK:
+        with LOG_FILE.open("a", encoding="utf-8") as f:
+            f.write(line + "\n")
 
 
 def log_block(title: str):
@@ -68,9 +77,10 @@ def log_block(title: str):
 
 
 def write_status(data: dict):
-    tmp = STATUS_FILE.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-    tmp.replace(STATUS_FILE)
+    with _WRITE_LOCK:
+        tmp = STATUS_FILE.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(STATUS_FILE)
 
 
 def run_python(script: str, args: list, timeout: int = 300) -> tuple[bool, float, list]:
@@ -89,8 +99,10 @@ def run_python(script: str, args: list, timeout: int = 300) -> tuple[bool, float
 
     tmp_dir = ASVK_BASE / "logs"
     tmp_dir.mkdir(parents=True, exist_ok=True)
-    stdout_path = tmp_dir / f"_sub_{os.getpid()}_{int(t0*1000)}_out.tmp"
-    stderr_path = tmp_dir / f"_sub_{os.getpid()}_{int(t0*1000)}_err.tmp"
+    # Use thread id for uniqueness when called from multiple threads simultaneously
+    tid = threading.get_ident()
+    stdout_path = tmp_dir / f"_sub_{os.getpid()}_{tid}_{int(t0*1000)}_out.tmp"
+    stderr_path = tmp_dir / f"_sub_{os.getpid()}_{tid}_{int(t0*1000)}_err.tmp"
 
     rc = -1
     killed = False
@@ -154,6 +166,21 @@ def run_stage_chain(base_dir: Path, stages: list[tuple[str, str, int]], sym: str
             chain_broken = True
 
 
+def _run_parallel(tasks: list, label: str = "parallel"):
+    """Run list of (callable, *args) concurrently via threads. Re-raises first exception."""
+    with ThreadPoolExecutor(max_workers=len(tasks)) as pool:
+        futures = [pool.submit(fn, *args) for fn, *args in tasks]
+        errors = []
+        for fut in as_completed(futures):
+            try:
+                fut.result()
+            except Exception as e:
+                log(f"  {label} task ERROR: {e}")
+                errors.append(e)
+        if errors:
+            raise errors[0]
+
+
 # ══════════════════════════ Блок 1: данные + e12d/s7d/индикаторы ══════════════════════════
 
 def block1_data_and_indicators(status: dict, end_date: str):
@@ -172,65 +199,96 @@ def block1_data_and_indicators(status: dict, end_date: str):
         run_step(LIB_DIR / "s7d.py", ["--symbol", sym, "--start", "2018-01-01", "--end", end_date],
                   status, f"s7d_{sym}", f"s7d {sym}")
 
-    # maxV + ATR14(12h) — читается B9C2 (maxV sweep) и WIDE-фильтром всей B1-семьи
+    # Batch: trendline(8 вариантов) + maxv + wma + vwap_anchors — загружает CSV один раз на символ
     for sym in SYMBOLS:
-        run_step(LIB_DIR / "maxv.py", ["--symbol", sym, "--start", "2018-01-01", "--end", end_date],
-                  status, f"maxv_{sym}", f"maxv {sym}")
-
-    # Trendline HMA-200 (D) + band — читается детектором B4C2 (HMA-200 D sweep)
-    for sym in SYMBOLS:
-        run_step(LIB_DIR / "trendline.py",
-                  ["--symbol", sym, "--tf", "D", "--length", "200", "--start", "2018-01-01", "--end", end_date],
-                  status, f"trendline_D200_{sym}", f"trendline D200 {sym}")
-
-    # Остальные MA-варианты B4 (B4C1, B4C3..B4C6) — см. B4_MA_VARIANTS выше
-    for sym in SYMBOLS:
-        for tf, length, mode in B4_MA_VARIANTS:
-            variant = f"{tf}{length}" if mode == "Hma" else f"{tf}{length}{mode}"
-            run_step(LIB_DIR / "trendline.py",
-                      ["--symbol", sym, "--tf", tf, "--length", str(length), "--mode", mode,
-                       "--start", "2018-01-01", "--end", end_date],
-                      status, f"trendline_{variant}_{sym}", f"trendline {variant} {sym}")
-
-    # Trendline HMA-78 (1h) + WMA-50 (1h) — для Block 5 (паттерны: MA-фильтры во всех 22 детекторах)
-    for sym in SYMBOLS:
-        run_step(LIB_DIR / "trendline.py",
-                  ["--symbol", sym, "--tf", "1h", "--length", "78", "--start", "2018-01-01", "--end", end_date],
-                  status, f"trendline_1h78_{sym}", f"trendline 1h78 {sym}")
-        run_step(LIB_DIR / "wma.py", ["--symbol", sym, "--start", "2018-01-01", "--end", end_date],
-                  status, f"wma_{sym}", f"wma {sym}")
-
-    # VWAP anchors (D/W фракталы + W-alignment) — читается детектором B5C1 (VWAP sweep)
-    for sym in SYMBOLS:
-        run_step(LIB_DIR / "vwap_anchors.py", ["--symbol", sym, "--start", "2018-01-01", "--end", end_date],
-                  status, f"vwap_anchors_{sym}", f"vwap_anchors {sym}")
+        run_step(LIB_DIR / "trendline_batch.py",
+                  ["--symbol", sym, "--end", end_date],
+                  status, f"trendline_batch_{sym}", f"trendline_batch {sym}")
 
 
 # ══════════════════════════ Блок 2: 12h-фрактал ══════════════════════════
 
-def block2_fractal12h(status: dict, end_date: str):
-    """A-фильтры (a1..a4) + B1..B9 условия — run_fractal12h.py оркестрирует весь
-    каскад для одного символа (переиспользует загруженные 1m/12h/15m данные)."""
+def _cold_start_flags(now_msk: datetime) -> tuple[bool, bool]:
+    """Определяет нужен ли принудительный запуск заблокированных по времени блоков.
+
+    Возвращает (force_hourly, force_12h):
+    - force_hourly: блоки 3/5 запустить сейчас даже если минута >= 15
+    - force_12h:   блок 2 запустить сейчас даже если UTC час не 0/12
+
+    Логика: смотрим финальный timestamp предыдущего прогона.
+    Если прошло > 20 мин — значит пропустили хотя бы один hourly цикл.
+    Если прошло > 12h — значит пропустили хотя бы один 12h цикл.
+    Дополнительно: если data/fractal12h/ не существует — блок 2 никогда не считался.
+    """
+    force_hourly = False
+    force_12h = False
+    try:
+        if STATUS_FILE.exists():
+            prev = json.loads(STATUS_FILE.read_text(encoding="utf-8"))
+            finished_str = prev.get("finished_at")
+            if finished_str:
+                finished = datetime.fromisoformat(finished_str)
+                downtime_s = (now_msk - finished).total_seconds()
+                if downtime_s > 20 * 60:
+                    force_hourly = True
+                    log(f"  cold-start: {downtime_s/60:.0f} мин простоя → force_hourly блоки 3/5")
+                if downtime_s > 12 * 3600:
+                    force_12h = True
+                    log(f"  cold-start: {downtime_s/3600:.1f}h простоя → force_12h блок 2")
+            else:
+                force_hourly = force_12h = True
+                log("  cold-start: нет finished_at → force all gates")
+        else:
+            force_hourly = force_12h = True
+            log("  cold-start: нет pipeline_status.json → force all gates")
+    except Exception as e:
+        force_hourly = force_12h = True
+        log(f"  cold-start: ошибка чтения статуса ({e}) → force all gates")
+
+    fractal_dir = DATA_DIR / "fractal12h"
+    if not fractal_dir.exists() or not any(fractal_dir.glob("basket_hits_BTC_*.parquet")):
+        if not force_12h:
+            force_12h = True
+            log("  cold-start: data/fractal12h/ пуст → force_12h блок 2")
+
+    return force_hourly, force_12h
+
+
+def block2_fractal12h(status: dict, end_date: str, now_utc: datetime, force: bool = False):
+    """12h gate: запускается в 15-мин окне после закрытия 12h-бара (00:00 и 12:00 UTC).
+    force=True при cold-start: пропускает gate.
+    Параллельно по символам."""
     log_block("Блок 2: 12h-фрактал (A + B1..B9)")
+    if not force and (now_utc.hour not in (0, 12) or now_utc.minute >= 15):
+        log(f"  fractal12h: SKIPPED (UTC {now_utc.strftime('%H:%M')}, 12h gate — только 00:00-00:14 и 12:00-12:14 UTC)")
+        return
+    if force:
+        log(f"  fractal12h: FORCED (cold-start, UTC {now_utc.strftime('%H:%M')})")
     FRACTAL12H_DIR = LIB_DIR / "fractal12h"
-    for sym in SYMBOLS:
-        run_step(FRACTAL12H_DIR / "run_fractal12h.py",
-                  ["--symbol", sym, "--start", "2020-01-01", "--end", end_date],
-                  status, f"fractal12h_{sym}", f"fractal12h {sym}", timeout=600)
+    tasks = [
+        (run_step,
+         FRACTAL12H_DIR / "run_fractal12h.py",
+         ["--symbol", sym, "--start", "2020-01-01", "--end", end_date],
+         status, f"fractal12h_{sym}", f"fractal12h {sym}", 600)
+        for sym in SYMBOLS
+    ]
+    _run_parallel(tasks, "fractal12h")
 
 
 # ══════════════════════════ Блок 3: Liq_OB4h_VC + FVG_OB4h_VC ══════════════════════════
 
-def block3_ob4h(status: dict, end_date: str, now_msk: datetime):
+def block3_ob4h(status: dict, end_date: str, now_msk: datetime, force: bool = False):
     """Почасовой gate — запускается только в первый 15-мин cycle нового часа MSK
-    (минута < 15), т.к. входной 4h OB canonical не меняется чаще раза в час."""
+    (минута < 15), т.к. входной 4h OB canonical не меняется чаще раза в час.
+    force=True при cold-start: пропускает gate.
+    Символы и цепочки (liq + fvg) запускаются параллельно."""
     log_block("Блок 3: Liq_OB4h_VC + FVG_OB4h_VC")
-    should_run = now_msk.minute < 15
-    if not should_run:
+    if not force and now_msk.minute >= 15:
         log(f"  ob4h_vc: SKIPPED (MSK {now_msk.strftime('%H:%M')}, hourly gate — только :00-:14)")
         return
+    if force and now_msk.minute >= 15:
+        log(f"  ob4h_vc: FORCED (cold-start, MSK {now_msk.strftime('%H:%M')})")
 
-    log(f"  liq_ob4h_vc: RUNNING (MSK {now_msk.strftime('%H:%M')}, hourly gate)")
     LIQ4H_DIR = LIB_DIR / "Liq_OB4h_VC"
     LIQ4H_STAGES = [
         ("stage1", "ob_canonical_4h.py",         600),
@@ -238,27 +296,30 @@ def block3_ob4h(status: dict, end_date: str, now_msk: datetime):
         ("stage3", "ob_stage3_1h_vc.py",         600),
         ("stage4", "ob_stage4_race.py",         1200),
     ]
-    for sym in SYMBOLS:
-        run_stage_chain(LIQ4H_DIR, LIQ4H_STAGES, sym, end_date, status, "liq_ob4h_vc")
-
-    log(f"  fvg_ob4h_vc: RUNNING (MSK {now_msk.strftime('%H:%M')}, hourly gate)")
     FVG4H_DIR = LIB_DIR / "FVG_OB4h_VC"
     FVG4H_STAGES = [
         ("stage1", "fvg_ob_canonical_4h.py", 600),
         ("stage3", "ob_stage3_1h_vc.py",     600),
         ("stage4", "ob_stage4_race.py",     1200),
     ]
-    for sym in SYMBOLS:
-        run_stage_chain(FVG4H_DIR, FVG4H_STAGES, sym, end_date, status, "fvg_ob4h_vc")
+
+    log(f"  liq_ob4h_vc + fvg_ob4h_vc: RUNNING parallel {len(SYMBOLS)} syms × 2 chains"
+        f" (MSK {now_msk.strftime('%H:%M')})")
+    tasks = (
+        [(run_stage_chain, LIQ4H_DIR, LIQ4H_STAGES, sym, end_date, status, "liq_ob4h_vc")
+         for sym in SYMBOLS] +
+        [(run_stage_chain, FVG4H_DIR, FVG4H_STAGES, sym, end_date, status, "fvg_ob4h_vc")
+         for sym in SYMBOLS]
+    )
+    _run_parallel(tasks, "ob4h")
 
 
 # ══════════════════════════ Блок 4: Liq_OB1h_VC + FVG_OB1h_VC ══════════════════════════
 
 def block4_ob1h(status: dict, end_date: str, now_msk: datetime):
-    """Каждый 15-мин cycle (без gate) — 1h OB canonical пересчитывается каждый цикл."""
+    """Каждый 15-мин cycle — символы и цепочки (liq + fvg) параллельно."""
     log_block("Блок 4: Liq_OB1h_VC + FVG_OB1h_VC")
 
-    log(f"  liq_ob1h_vc: RUNNING (MSK {now_msk.strftime('%H:%M')}, every 15min)")
     LIQ1H_DIR = LIB_DIR / "Liq_OB1h_VC"
     LIQ1H_STAGES = [
         ("stage1", "ob_canonical_1h.py",         600),
@@ -266,37 +327,45 @@ def block4_ob1h(status: dict, end_date: str, now_msk: datetime):
         ("stage3", "ob_stage3_15m_vc.py",        600),
         ("stage4", "ob_stage4_race.py",         1200),
     ]
-    for sym in SYMBOLS:
-        run_stage_chain(LIQ1H_DIR, LIQ1H_STAGES, sym, end_date, status, "liq_ob1h_vc")
-
-    log(f"  fvg_ob1h_vc: RUNNING (MSK {now_msk.strftime('%H:%M')}, every 15min)")
     FVG1H_DIR = LIB_DIR / "FVG_OB1h_VC"
     FVG1H_STAGES = [
         ("stage1", "fvg_ob_canonical_1h.py", 600),
         ("stage3", "ob_stage3_15m_vc.py",    600),
         ("stage4", "ob_stage4_race.py",     1200),
     ]
-    for sym in SYMBOLS:
-        run_stage_chain(FVG1H_DIR, FVG1H_STAGES, sym, end_date, status, "fvg_ob1h_vc")
+
+    log(f"  liq_ob1h_vc + fvg_ob1h_vc: RUNNING parallel {len(SYMBOLS)} syms × 2 chains"
+        f" (MSK {now_msk.strftime('%H:%M')})")
+    tasks = (
+        [(run_stage_chain, LIQ1H_DIR, LIQ1H_STAGES, sym, end_date, status, "liq_ob1h_vc")
+         for sym in SYMBOLS] +
+        [(run_stage_chain, FVG1H_DIR, FVG1H_STAGES, sym, end_date, status, "fvg_ob1h_vc")
+         for sym in SYMBOLS]
+    )
+    _run_parallel(tasks, "ob1h")
 
 
 # ══════════════════════════ Блок 5: Паттерны ══════════════════════════
 
-def block5_patterns(status: dict, end_date: str, now_msk: datetime):
-    """22 паттерна — daily gate (раз в сутки MSK, timeout 60 min)."""
-    FLAG_FILE = DATA_DIR / "patterns_last_run.txt"
-    today_str = now_msk.strftime("%Y-%m-%d")
-    if FLAG_FILE.exists() and FLAG_FILE.read_text(encoding="utf-8").strip() == today_str:
-        log(f"  patterns: SKIPPED (daily gate — уже запускались сегодня {today_str})")
-        return
+def block5_patterns(status: dict, end_date: str, now_msk: datetime, force: bool = False):
+    """Hourly gate: запускается в 15-мин окне после закрытия 1h-бара.
+    22 паттерна — инкрементальный скан последних 600 1h-баров. Параллельно по символам.
+    force=True при cold-start: пропускает gate."""
     log_block("Блок 5: Паттерны (22 паттерна: SHORT + LONG)")
-    log(f"  patterns: RUNNING (MSK {now_msk.strftime('%H:%M')}, daily gate)")
+    if not force and now_msk.minute >= 15:
+        log(f"  patterns: SKIPPED (MSK {now_msk.strftime('%H:%M')}, hourly gate — только :00-:14)")
+        return
+    if force and now_msk.minute >= 15:
+        log(f"  patterns: FORCED (cold-start, MSK {now_msk.strftime('%H:%M')})")
     PATTERNS_DIR = LIB_DIR / "patterns"
-    for sym in SYMBOLS:
-        run_step(PATTERNS_DIR / "run_patterns.py",
-                  ["--symbol", sym, "--start", "2020-01-01", "--end", end_date],
-                  status, f"patterns_{sym}", f"patterns {sym}", timeout=3600)
-    FLAG_FILE.write_text(today_str, encoding="utf-8")
+    tasks = [
+        (run_step,
+         PATTERNS_DIR / "run_patterns.py",
+         ["--symbol", sym, "--start", "2020-01-01", "--end", end_date],
+         status, f"patterns_{sym}", f"patterns {sym}", 120)
+        for sym in SYMBOLS
+    ]
+    _run_parallel(tasks, "patterns")
 
 
 # ══════════════════════════ Export + finalize ══════════════════════════
@@ -345,6 +414,7 @@ def main():
     global_t0 = time.time()
     started_at = datetime.now(MSK).isoformat()
     end_date = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d")
+    now_utc = datetime.now(timezone.utc)
     now_msk = datetime.now(MSK)
     log(f"═══ ASVK pipeline started (end={end_date}) ═══")
 
@@ -353,12 +423,19 @@ def main():
     write_status(status)
 
     block1_data_and_indicators(status, end_date)
-    block2_fractal12h(status, end_date)
-    block3_ob4h(status, end_date, now_msk)
-    block4_ob1h(status, end_date, now_msk)
-    block5_patterns(status, end_date, now_msk)
-    export_live_snapshot(status)
 
+    # Блоки 2/3/4/5 не зависят от вывода друг друга — запускаем параллельно
+    # Cold-start: если демон только запустился или долго не работал — форсируем gate-блоки
+    force_hourly, force_12h = _cold_start_flags(now_msk)
+    log("═══ Блоки 2/3/4/5: параллельный старт ═══")
+    _run_parallel([
+        (block2_fractal12h, status, end_date, now_utc, force_12h),
+        (block3_ob4h,       status, end_date, now_msk, force_hourly),
+        (block4_ob1h,       status, end_date, now_msk),
+        (block5_patterns,   status, end_date, now_msk, force_hourly),
+    ], "blocks2-5")
+
+    export_live_snapshot(status)
     return finalize(status, global_t0)
 
 
