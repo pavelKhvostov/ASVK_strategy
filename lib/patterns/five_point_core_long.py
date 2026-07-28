@@ -347,7 +347,11 @@ def compute_five_point_long(mode: str, pattern_name: str, df_1h: pd.DataFrame, s
             "width_bars": pat['width_bars'],
             "status": "CONFIRMED",
         })
-    return pd.DataFrame(rows), stats
+    _COLS = ["signal_ts","direction","pattern","ts_breakout",
+             "ts_i1","ts_i2","ts_i3","ts_i4","ts_i5",
+             "H1","L2","H3","L4","H5",
+             "breakout_close","target","width_bars","status"]
+    return pd.DataFrame(rows) if rows else pd.DataFrame(columns=_COLS), stats
 
 
 def print_stats(stats: dict, label: str) -> None:

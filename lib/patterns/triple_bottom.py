@@ -267,7 +267,10 @@ def compute_triple_bottom(df_1h: pd.DataFrame, symbol: str,
             "width_bars":     p['width_bars'],
             "status":         "CONFIRMED",
         })
-    return pd.DataFrame(rows), stats
+    _COLS = ["signal_ts","direction","pattern","ts_breakout","ts_i6",
+             "L1","H2","L3","H4","L5","H6",
+             "breakout_close","target","width_bars","status"]
+    return pd.DataFrame(rows) if rows else pd.DataFrame(columns=_COLS), stats
 
 
 def print_stats(stats: dict) -> None:

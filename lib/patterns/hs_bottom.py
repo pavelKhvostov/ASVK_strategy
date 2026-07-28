@@ -376,7 +376,12 @@ def compute_hs_bottom(df_1h: pd.DataFrame, symbol: str,
             "width_bars": pat['width_bars'], "height_atr": pat['height_atr'],
             "status": "CONFIRMED",
         })
-    return pd.DataFrame(rows), stats
+    _COLS = ["signal_ts","direction","pattern","ts_breakout",
+             "ts_ls","ts_h","ts_rs",
+             "head_p","ls_p","rs_p",
+             "breakout_close","target_half","target_full","target_2x","stop",
+             "width_bars","height_atr","status"]
+    return pd.DataFrame(rows) if rows else pd.DataFrame(columns=_COLS), stats
 
 
 def print_stats(stats: dict) -> None:
