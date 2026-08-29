@@ -88,8 +88,12 @@ def compute_verdict(symbol: str, start: str, end: str) -> dict:
         p_ts = int(row["pivot_open_ts_ms"])
         p_idx = ts_to_idx.get(p_ts, None)
         age = (latest_idx - p_idx) if p_idx is not None else None
+        grade = int(row["signal_grade"]) if "signal_grade" in row else None
+        wr_est = float(row["signal_wr_est"]) if "signal_wr_est" in row else None
+        conf = int(row["confluence"]) if "confluence" in row else None
         rec = {"direction": row["direction"], "signal_ts_ms": p_ts,
-               "signal_msk": _msk(p_ts), "age_bars": age, "wr": wr}
+               "signal_msk": _msk(p_ts), "age_bars": age, "wr": wr,
+               "grade": grade, "wr_est": wr_est, "confluence": conf}
         out["tiers"][col] = rec
         if age is not None and age <= RECENCY_BARS:
             if best is None or pri < best[0] or (pri == best[0] and p_idx > best[1]):
@@ -104,6 +108,11 @@ def compute_verdict(symbol: str, start: str, end: str) -> dict:
         out["on_current_candle"] = bool(age == 0)
         out["signal_ts_ms"] = p_ts
         out["signal_msk"] = _msk(p_ts)
+        drec = out["tiers"].get("decision_hit") or out["tiers"].get(TIERS[0][0])
+        if drec:
+            out["grade"] = drec.get("grade")
+            out["wr_est"] = drec.get("wr_est")
+            out["confluence"] = drec.get("confluence")
     return out
 
 
@@ -114,7 +123,12 @@ def print_verdict(v: dict) -> None:
         print(f"  СЕЙЧАС: {arrow}  — нет свежего сигнала (≤{RECENCY_BARS} баров)", file=sys.stderr, flush=True)
     else:
         when = "НА ЭТОЙ СВЕЧЕ ✓" if v["on_current_candle"] else f"{v['age_bars']} бар(а/ов) назад"
-        print(f"  СЕЙЧАС: {arrow}  [tier {v['tier']}, WR {v.get('wr','?')}]  сигнал {when}",
+        g = v.get("grade"); we = v.get("wr_est"); cf = v.get("confluence")
+        grade_txt = ""
+        if g is not None:
+            names = {1: "LOW", 2: "MED", 3: "HIGH", 4: "V.HIGH", 5: "PREMIUM"}
+            grade_txt = f"  уверенность {g}/5 {names.get(g,'')} (~{we:.0f}%, факторов={cf})"
+        print(f"  СЕЙЧАС: {arrow}  [tier {v['tier']}]{grade_txt}  сигнал {when}",
               file=sys.stderr, flush=True)
         print(f"          пивот {v['signal_msk']}", file=sys.stderr, flush=True)
     # что говорит каждый tier (последний сигнал)
