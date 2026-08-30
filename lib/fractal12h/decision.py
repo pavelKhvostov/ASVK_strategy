@@ -107,6 +107,17 @@ def compute_decision(hits: pd.DataFrame, bstruct: pd.DataFrame | None = None,
     # production: сетап зона&подтв, ПЛЮС ловим сильные CHoCH-развороты, что сетап пропустил
     h["decision_hit"]     = h["decision_setup"] | (h["decision_zone"] & h["bstruct_choch"])
 
+    # ── ВОЗВРАТ сильных отсеянных сигналов (стратификация отсева, см. ROADMAP) ──
+    # Инсайт: сильное подтверждение само по себе достаточно, зона не обязательна.
+    # Сильные страты отсева: b9 без зоны (80.5%), ≥2 подтверждения (81%), CHoCH (90%).
+    # Балласт (НЕ возвращаем): зона-без-подтв (58%), одиночная ликвидность b3 (61%), b5-alone (72%).
+    nconf                 = h[CONFIRM_COLS].sum(axis=1)
+    strong_confirm        = h["b9_hit"] | (nconf >= 2) | h["bstruct_choch"]
+    recover_a             = (~h["decision_hit"]) & (~h["decision_zone"]) & strong_confirm
+    h["decision_wide"]    = h["decision_hit"] | recover_a          # A: +72% сигналов, WR ~82%
+    recover_b             = recover_a | ((~h["decision_hit"]) & (~h["decision_zone"]) & h["b4_hit"])
+    h["decision_wide_b"]  = h["decision_hit"] | recover_b          # B: ~×2 сигналов, WR ~80%
+
     # ── ГРЕЙД УВЕРЕННОСТИ сигнала (по данным: чем больше совпавших факторов, тем выше WR) ──
     # 1 low ~74% · 2 med ~80% · 3 high ~85% · 4 very-high ~88% · 5 premium(CHoCH) ~96%
     conf = h["confluence"]
@@ -149,6 +160,8 @@ def print_stats(hits: pd.DataFrame) -> None:
         ("decision_mh",      "зона&подтв&money"),
         ("decision_choch",   "зона&подтв&CHoCH"),
         ("decision_hit",     "PRODUCTION (setup∪CHoCH)"),
+        ("decision_wide",    "WIDE-A (+возврат b9/≥2/CHoCH)"),
+        ("decision_wide_b",  "WIDE-B (+b4)"),
     ]
     for col, label in order:
         if col not in hits.columns:
