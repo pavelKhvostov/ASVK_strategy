@@ -28,6 +28,11 @@ import b5_vwap
 import b8_power_zone
 import b9_others
 import basket as basket_mod
+import b_structure as bstruct_mod
+import b6_divergence as b6_mod
+import b7_money_hands as b7_mod
+import decision as decision_mod
+import verdict as verdict_mod
 
 
 def main() -> None:
@@ -135,6 +140,42 @@ def main() -> None:
     basket_path = DATA_OUT / f"basket_hits_{sym}_{start}_{end}.parquet"
     merged.to_parquet(basket_path, index=False, compression="zstd", compression_level=9)
     print(f"  written: {basket_path.name}  ({len(merged):,} rows)", file=sys.stderr, flush=True)
+
+    # ── B-структура (BOS/CHoCH/sweep — ядро метода Арденского, причинно на 12h) ──
+    print(f"\n── B-structure (BOS/CHoCH) ──", file=sys.stderr, flush=True)
+    bstruct = bstruct_mod.compute_bstruct(cand, df_12h)
+    bstruct_mod.print_stats(bstruct)
+    bstruct_path = DATA_OUT / f"bstruct_hits_{sym}_{start}_{end}.parquet"
+    bstruct.to_parquet(bstruct_path, index=False, compression="zstd", compression_level=9)
+    print(f"  written: {bstruct_path.name}  ({len(bstruct):,} rows)", file=sys.stderr, flush=True)
+
+    # ── B6 RSI-дивергенция (канон-блок B6) ──
+    print(f"\n── B6 RSI-divergence ──", file=sys.stderr, flush=True)
+    b6 = b6_mod.compute_b6(cand, df_12h)
+    b6_mod.print_stats(b6)
+    b6_path = DATA_OUT / f"b6_hits_{sym}_{start}_{end}.parquet"
+    b6.to_parquet(b6_path, index=False, compression="zstd", compression_level=9)
+    print(f"  written: {b6_path.name}  ({len(b6):,} rows)", file=sys.stderr, flush=True)
+
+    # ── B7 Money Hands (канон-блок B7: климакс-объём + поглощение) ──
+    print(f"\n── B7 Money Hands ──", file=sys.stderr, flush=True)
+    b7 = b7_mod.compute_b7(cand, df_12h)
+    b7_mod.print_stats(b7)
+    b7_path = DATA_OUT / f"b7_hits_{sym}_{start}_{end}.parquet"
+    b7.to_parquet(b7_path, index=False, compression="zstd", compression_level=9)
+    print(f"  written: {b7_path.name}  ({len(b7):,} rows)", file=sys.stderr, flush=True)
+
+    # ── Decision (слияние: зона + подтверждение(+B7) + структура + дивергенция) ──
+    print(f"\n── Decision (Arden-confluence + structure + RSI + money-hands) ──", file=sys.stderr, flush=True)
+    decided = decision_mod.compute_decision(merged, bstruct, b6, b7)
+    decision_mod.print_stats(decided)
+    decision_path = DATA_OUT / f"decision_hits_{sym}_{start}_{end}.parquet"
+    decided.to_parquet(decision_path, index=False, compression="zstd", compression_level=9)
+    print(f"  written: {decision_path.name}  ({len(decided):,} rows)", file=sys.stderr, flush=True)
+
+    # ── Живой вердикт: LONG / SHORT / FLAT на текущей свече ──
+    v = verdict_mod.compute_verdict(sym, start, end)
+    verdict_mod.print_verdict(v)
 
     print(f"\n═══ run_fractal12h done in {time.time()-t0:.1f}s ═══", file=sys.stderr, flush=True)
 
