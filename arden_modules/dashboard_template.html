@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<title>Арденский · живые сигналы</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lightweight-charts/4.1.3/lightweight-charts.standalone.production.js"></script>
+<style>
+  :root{
+    --bg:#0a1016; --surface:#111a22; --panel:#0e161d; --raise:#16222c;
+    --ink:#e7eef4; --muted:#93a3b1; --faint:#5f7182;
+    --line:#1f2c37; --line-2:#2b3b48;
+    --accent:#25cbad; --accent-dim:#1a8f7a;
+    --up:#2fbf8f; --down:#f0556f; --gold:#e2b455;
+    --long:#2fbf8f; --short:#f0556f;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 14px 34px -18px rgba(0,0,0,.7);
+  }
+  :root[data-theme="light"]{
+    --bg:#eef1f3; --surface:#ffffff; --panel:#f4f6f8; --raise:#e9edf0;
+    --ink:#14202b; --muted:#566472; --faint:#8695a2;
+    --line:#e0e5e9; --line-2:#cdd5db;
+    --accent:#0c9784; --accent-dim:#0a7e6f;
+    --up:#12986f; --down:#d23a56; --gold:#b07d17;
+    --long:#12986f; --short:#d23a56;
+    --shadow:0 1px 2px rgba(20,32,43,.06),0 12px 30px -18px rgba(20,32,43,.25);
+  }
+  @media (prefers-color-scheme:light){
+    :root:not([data-theme="dark"]){
+      --bg:#eef1f3; --surface:#ffffff; --panel:#f4f6f8; --raise:#e9edf0;
+      --ink:#14202b; --muted:#566472; --faint:#8695a2;
+      --line:#e0e5e9; --line-2:#cdd5db;
+      --accent:#0c9784; --accent-dim:#0a7e6f;
+      --up:#12986f; --down:#d23a56; --gold:#b07d17;
+      --long:#12986f; --short:#d23a56;
+      --shadow:0 1px 2px rgba(20,32,43,.06),0 12px 30px -18px rgba(20,32,43,.25);
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Golos Text",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+  .wrap{max-width:1280px;margin:0 auto;padding:16px 18px 44px}
+
+  header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;
+    padding:6px 0 14px;border-bottom:1px solid var(--line);margin-bottom:16px}
+  .brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .brand h1{font-family:"Unbounded",sans-serif;font-weight:800;font-size:1.25rem;margin:0;letter-spacing:-.02em}
+  .tag{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent);border:1px solid var(--line-2);border-radius:6px;padding:3px 8px}
+  .upd{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--faint)}
+  .theme-btn{appearance:none;border:1px solid var(--line-2);background:var(--panel);color:var(--muted);
+    cursor:pointer;border-radius:8px;width:34px;height:34px;font-size:15px;display:grid;place-items:center}
+  .theme-btn:hover{color:var(--ink)}
+
+  .strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:1px;background:var(--line);
+    border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:16px;box-shadow:var(--shadow)}
+  .cell{background:var(--surface);padding:11px 13px}
+  .cell .n{font-family:"Unbounded",sans-serif;font-weight:700;font-size:1.3rem;font-variant-numeric:tabular-nums;line-height:1.15}
+  .cell .l{font-size:10.5px;color:var(--muted);margin-top:3px;line-height:1.3}
+  .pos{color:var(--up)} .neg{color:var(--down)} .acc{color:var(--accent)} .gld{color:var(--gold)}
+
+  .cols{display:grid;grid-template-columns:1fr 380px;gap:16px}
+  @media(max-width:980px){.cols{grid-template-columns:1fr}}
+
+  .controls{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-bottom:12px}
+  .group{display:flex;flex-direction:column;gap:6px}
+  .glabel{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+  .tabs{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px}
+  .tab{appearance:none;border:none;background:transparent;color:var(--muted);cursor:pointer;
+    font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:500;padding:7px 13px;border-radius:7px;transition:.12s}
+  .tab:hover{color:var(--ink)}
+  .tab[aria-selected="true"]{background:var(--accent);color:#04120f;font-weight:700}
+  :root[data-theme="light"] .tab[aria-selected="true"]{color:#fff}
+  .tab .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gold);margin-left:5px;vertical-align:middle}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+  .chart-card{padding:8px}
+  #chart{width:100%;height:min(58vh,520px)}
+  .chart-head{display:flex;justify-content:space-between;align-items:center;padding:8px 10px 4px;gap:12px;flex-wrap:wrap}
+  .price{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:1.05rem}
+  .hint{font-size:11px;color:var(--faint);font-family:"JetBrains Mono",monospace}
+
+  .side{display:flex;flex-direction:column;gap:12px;max-height:calc(58vh + 60px);overflow-y:auto;padding-right:2px}
+  .sig{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:13px 14px;cursor:pointer;
+    box-shadow:var(--shadow);transition:border-color .12s}
+  .sig:hover{border-color:var(--line-2)}
+  .sig.sel{border-color:var(--accent)}
+  .sig-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:9px}
+  .sig-pair{font-family:"Unbounded",sans-serif;font-weight:700;font-size:.95rem}
+  .dir{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:12.5px;padding:3px 8px;border-radius:6px}
+  .dir.long{color:var(--long);background:color-mix(in srgb,var(--long) 14%,transparent)}
+  .dir.short{color:var(--short);background:color-mix(in srgb,var(--short) 14%,transparent)}
+  .st{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    padding:2px 7px;border-radius:20px;border:1px solid var(--line-2);color:var(--muted)}
+  .st.filled{color:var(--accent);border-color:var(--accent)}
+  .lv{display:grid;grid-template-columns:44px 1fr auto;gap:6px;align-items:baseline;
+    font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:2.5px 0}
+  .lv .k{color:var(--faint);font-size:11px}
+  .lv .v{font-weight:600}
+  .lv .d{color:var(--muted);font-size:11px}
+  .sig-foot{margin-top:9px;padding-top:9px;border-top:1px solid var(--line);
+    font-size:11.5px;color:var(--muted);line-height:1.45}
+  .empty{padding:26px 16px;text-align:center;color:var(--muted);font-size:13.5px;line-height:1.6}
+
+  .box{padding:14px 16px}
+  .box h3{margin:0 0 10px;font-size:11.5px;font-family:"JetBrains Mono",monospace;letter-spacing:.13em;
+    text-transform:uppercase;color:var(--faint);font-weight:500}
+  table{width:100%;border-collapse:collapse;font-family:"JetBrains Mono",monospace;font-size:12.5px}
+  th{text-align:right;color:var(--faint);font-weight:500;font-size:10.5px;letter-spacing:.08em;
+    text-transform:uppercase;padding:0 0 7px}
+  th:first-child,td:first-child{text-align:left}
+  td{text-align:right;padding:4.5px 0;border-top:1px solid var(--line)}
+  .bars{display:flex;align-items:flex-end;gap:5px;height:64px;margin-top:6px}
+  .bar{flex:1;background:var(--accent);border-radius:3px 3px 0 0;min-height:3px;position:relative}
+  .bar span{position:absolute;bottom:-17px;left:0;right:0;text-align:center;font-size:9.5px;color:var(--faint);
+    font-family:"JetBrains Mono",monospace}
+  .note{font-size:12px;color:var(--muted);line-height:1.55;margin-top:12px}
+  .note b{color:var(--ink);font-weight:600}
+  .foot2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+  @media(max-width:820px){.foot2{grid-template-columns:1fr}}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+</style></head><body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>Арденский · живые сигналы</h1>
+      <span class="tag">Power of Three</span>
+      <span class="tag" id="live-count">—</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span class="upd" id="updated"></span>
+      <button class="theme-btn" id="theme" title="Сменить тему">◐</button>
+    </div>
+  </header>
+
+  <div class="strip" id="strip"></div>
+
+  <div class="controls">
+    <div class="group"><span class="glabel">Монета</span><div class="tabs" id="symtabs"></div></div>
+    <div class="group"><span class="glabel">Таймфрейм</span><div class="tabs" id="tftabs"></div></div>
+  </div>
+
+  <div class="cols">
+    <div class="card chart-card">
+      <div class="chart-head">
+        <div><span id="ptitle" style="font-weight:700"></span> <span id="price" class="price"></span></div>
+        <div class="hint" id="chart-hint">линии = вход · стоп · цели выбранного сигнала</div>
+      </div>
+      <div id="chart"></div>
+    </div>
+    <div class="side" id="side"></div>
+  </div>
+
+  <div class="foot2">
+    <div class="card box">
+      <h3>Проверено на истории · по таймфреймам</h3>
+      <table id="tftab"></table>
+      <div class="note"><b>2h даёт больше всего накопленного R</b> просто потому, что сигналов там втрое больше,
+        хотя качество каждого ниже, чем на 12h. Портфель из четырёх ТФ удваивает результат против прежних 4h+12h.</div>
+    </div>
+    <div class="card box">
+      <h3>Матожидание по годам, R на сделку</h3>
+      <div class="bars" id="years"></div>
+      <div class="note" style="margin-top:24px"><b>Все годы в плюсе</b>, включая боковой 2025 (+0.36R) и
+        медвежий 2022 (+0.40R). Проверка на новых данных (с 2024) дала +0.507R против +0.482R на обучающих —
+        стратегия не подогнана под историю.</div>
+    </div>
+  </div>
+
+  <div class="card box" style="margin-top:16px">
+    <h3>Как торговать сигнал</h3>
+    <div class="note" style="margin-top:0">
+      <b>1.</b> Пришёл сигнал — выставить <b>лимитный ордер</b> на цену входа, а также стоп и тейки.
+      Вход не по рынку: сетап отрабатывает именно на коррекции.<br>
+      <b>2.</b> Если за 10 баров лимит не исполнился — снять ордер, сетап устарел.<br>
+      <b>3.</b> На первой цели (1.5R) закрыть треть позиции и <b>перевести стоп в безубыток</b>.<br>
+      <b>4.</b> Остаток держать до второй цели (3R).<br>
+      <b>5.</b> Объём: <span class="mono">риск% ÷ размер стопа%</span>. Одновременно держать не более 10 позиций.<br><br>
+      <b>Честно:</b> это результат тестирования на истории 2017–2026, а не гарантия. Худшая серия убытков подряд — 15.
+      Просадка −8.4% при риске 0.5% на сделку. Реальное исполнение лимитника на выносе может отличаться от модели.
+    </div>
+  </div>
+</div>
+
+<script>
+const D = __DATA__;
+const P = D.portfolio;
+let cur = {sym: D.syms[0], tf: D.tfs[0]}, sel = null;
+const root = document.documentElement;
+try{ const t=localStorage.getItem("arden_theme"); if(t) root.setAttribute("data-theme",t); }catch(e){}
+const cv = n => getComputedStyle(root).getPropertyValue(n).trim();
+const fmt = x => x>=1000 ? x.toLocaleString("ru-RU",{maximumFractionDigits:2})
+               : (x>=1 ? (+x.toFixed(4)).toString() : (+x.toFixed(6)).toString());
+
+document.getElementById("updated").textContent = "обновлено " + D.updated;
+
+document.getElementById("strip").innerHTML = [
+  ["+"+P.sumR+"R", "накоплено за "+P.years+" года", "pos"],
+  [P.n, "сделок · "+P.per_year+" в год", ""],
+  ["+"+P.E.toFixed(3)+"R", "на сделку (95% ДИ "+P.ci[0]+"…"+P.ci[1]+")", "acc"],
+  [P.PF, "профит-фактор", "acc"],
+  [P.WR+"%", "прибыльных", ""],
+  ["+"+P.cagr+"%", "годовых при риске 0.5%", "pos"],
+  [P.dd+"%", "макс. просадка", "neg"],
+  [P.max_concurrent, "макс. позиций разом", ""],
+].map(function(a){ return '<div class="cell"><div class="n '+a[2]+'">'+a[0]+'</div><div class="l">'+a[1]+'</div></div>'; }).join("");
+
+document.getElementById("tftab").innerHTML =
+  "<tr><th>ТФ</th><th>сделок</th><th>E(R)</th><th>ПФ</th><th>ΣR</th></tr>" +
+  Object.entries(P.by_tf).map(function(e){ var k=e[0], v=e[1];
+    return "<tr><td>"+k+"</td><td>"+v.n+"</td><td class='pos'>+"+v.E.toFixed(3)+"</td><td>"+v.PF+"</td><td class='pos'>+"+v.sumR+"</td></tr>"; }).join("");
+
+var ys = Object.entries(P.by_year), mx = Math.max.apply(null, ys.map(function(e){return e[1];}));
+document.getElementById("years").innerHTML = ys.map(function(e){
+  return '<div class="bar" style="height:'+Math.max(4,e[1]/mx*100)+'%"><span>'+e[0].slice(2)+'</span></div>'; }).join("");
+
+function mkTabs(el, items, key){
+  el.innerHTML = "";
+  items.forEach(function(v){
+    var b=document.createElement("button"); b.className="tab";
+    var has = D.signals.some(function(s){ return key==="sym" ? (s.sym===v && s.tf===cur.tf) : (s.tf===v && s.sym===cur.sym); });
+    b.innerHTML = v + (has ? '<span class="dot"></span>' : "");
+    b.dataset.v = v; b.setAttribute("aria-selected", cur[key]===v);
+    b.onclick = function(){ cur[key]=v; sel=null; refresh(); };
+    el.appendChild(b);
+  });
+}
+
+const chartEl = document.getElementById("chart");
+let chart, series, lines = [];
+function themeOpts(){ return {
+  layout:{background:{type:"solid",color:cv("--surface")},textColor:cv("--muted"),fontFamily:"'JetBrains Mono',monospace"},
+  grid:{vertLines:{color:cv("--line")},horzLines:{color:cv("--line")}},
+  rightPriceScale:{borderColor:cv("--line-2")},
+  timeScale:{borderColor:cv("--line-2"),timeVisible:true,secondsVisible:false},
+  crosshair:{mode:0} }; }
+function seriesOpts(){ return {upColor:cv("--up"),downColor:cv("--down"),borderUpColor:cv("--up"),
+  borderDownColor:cv("--down"),wickUpColor:cv("--up"),wickDownColor:cv("--down")}; }
+chart = LightweightCharts.createChart(chartEl,Object.assign({width:chartEl.clientWidth,height:chartEl.clientHeight},themeOpts()));
+series = chart.addCandlestickSeries(seriesOpts());
+
+function drawChart(){
+  var c = (D.candles[cur.sym]||{})[cur.tf] || [];
+  series.setData(c.map(function(x){ return {time:x.t,open:x.o,high:x.h,low:x.l,close:x.c}; }));
+  lines.forEach(function(l){ try{series.removePriceLine(l);}catch(e){} }); lines = [];
+  var list = D.signals.filter(function(s){ return s.sym===cur.sym && s.tf===cur.tf; });
+  var s = (sel!==null && list[sel]) ? list[sel] : list[0];
+  if(s){
+    [["вход",s.entry,cv("--accent"),0],["стоп",s.stop,cv("--short"),2],
+     ["тп1 1.5R",s.tp1,cv("--long"),1],["тп2 3R",s.tp2,cv("--long"),1]].forEach(function(a){
+      lines.push(series.createPriceLine({price:a[1],color:a[2],lineWidth:1,lineStyle:a[3],
+        axisLabelVisible:true,title:a[0]}));
+    });
+    series.setMarkers([{time:Math.floor(s.sweep_ts/1000),
+      position:s.dir==="short"?"aboveBar":"belowBar", color:cv("--gold"),
+      shape:s.dir==="short"?"arrowDown":"arrowUp", text:"вынос"}]);
+  } else series.setMarkers([]);
+  chart.timeScale().fitContent();
+  var last = c[c.length-1];
+  document.getElementById("ptitle").textContent = cur.sym + " · " + cur.tf;
+  document.getElementById("price").textContent = last ? fmt(last.c) : "нет данных";
+  if(last) document.getElementById("price").style.color =
+    (c.length>1 && last.c>=c[c.length-2].c) ? cv("--up") : cv("--down");
+  document.getElementById("chart-hint").textContent = s
+    ? "линии = вход · стоп · цели выбранного сигнала"
+    : "активных сигналов на этой паре нет";
+}
+
+function drawSide(){
+  var list = D.signals.filter(function(s){ return s.sym===cur.sym && s.tf===cur.tf; });
+  var el = document.getElementById("side");
+  if(!list.length){
+    el.innerHTML = '<div class="card empty">Активных сетапов нет.<br>Это норма — стратегия ждёт '
+      + '<b>ложный вынос со сломом структуры</b>, такое случается примерно '
+      + Math.round(P.per_year/12) + ' раз в месяц по всему портфелю.</div>';
+    return;
+  }
+  el.innerHTML = list.map(function(s,i){
+    var d1 = Math.abs(s.tp1-s.entry)/s.entry*100, d2 = Math.abs(s.tp2-s.entry)/s.entry*100;
+    var size = D.risk / s.risk_pct * 100;
+    var isSel = (i === (sel===null ? 0 : sel));
+    return '<div class="sig '+(isSel?"sel":"")+'" data-i="'+i+'">'
+      + '<div class="sig-top"><span class="sig-pair">'+s.sym+'/USDT</span>'
+      + '<span class="dir '+s.dir+'">'+(s.dir==="short"?"▼ SHORT":"▲ LONG")+'</span>'
+      + '<span class="st '+(s.status==="FILLED"?"filled":"")+'">'
+      + (s.status==="FILLED"?"в позиции":"ждём лимит")+'</span></div>'
+      + '<div class="lv"><span class="k">вход</span><span class="v">'+fmt(s.entry)+'</span><span class="d">OTE 0.79</span></div>'
+      + '<div class="lv"><span class="k">стоп</span><span class="v" style="color:var(--short)">'+fmt(s.stop)+'</span><span class="d">−'+s.risk_pct.toFixed(2)+'%</span></div>'
+      + '<div class="lv"><span class="k">тп1</span><span class="v" style="color:var(--long)">'+fmt(s.tp1)+'</span><span class="d">+'+d1.toFixed(2)+'% · 33%</span></div>'
+      + '<div class="lv"><span class="k">тп2</span><span class="v" style="color:var(--long)">'+fmt(s.tp2)+'</span><span class="d">+'+d2.toFixed(2)+'% · 67%</span></div>'
+      + '<div class="sig-foot">Объём: риск '+D.risk+'% ÷ '+s.risk_pct.toFixed(2)+'% = <b>'+size.toFixed(0)+'%</b> депозита.<br>'
+      + 'Слом за '+s.bos_bars+' бар(а), импульс '+s.imp_atr.toFixed(1)+' ATR.</div></div>';
+  }).join("");
+  el.querySelectorAll(".sig").forEach(function(n){ n.onclick=function(){ sel=+n.dataset.i; refresh(); }; });
+}
+
+function refresh(){
+  mkTabs(document.getElementById("symtabs"), D.syms, "sym");
+  mkTabs(document.getElementById("tftabs"), D.tfs, "tf");
+  var pend = D.signals.filter(function(s){return s.status==="PENDING";}).length;
+  var fill = D.signals.filter(function(s){return s.status==="FILLED";}).length;
+  document.getElementById("live-count").textContent =
+    D.signals.length ? (pend+" ждут входа · "+fill+" в позиции") : "сигналов нет";
+  drawChart(); drawSide();
+}
+refresh();
+
+new ResizeObserver(function(){ chart.applyOptions({width:chartEl.clientWidth,height:chartEl.clientHeight}); }).observe(chartEl);
+document.getElementById("theme").onclick=function(){
+  var isLight = root.getAttribute("data-theme")==="light"
+    || (!root.getAttribute("data-theme") && matchMedia("(prefers-color-scheme:light)").matches);
+  var next = isLight ? "dark" : "light";
+  root.setAttribute("data-theme", next);
+  try{ localStorage.setItem("arden_theme", next); }catch(e){}
+  chart.applyOptions(themeOpts()); series.applyOptions(seriesOpts()); refresh();
+};
+setTimeout(function(){ location.reload(); }, 180000);
+</script></body></html>

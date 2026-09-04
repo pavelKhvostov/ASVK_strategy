@@ -1,0 +1,31 @@
+{
+  "_комментарий": "Впиши bot_token и admin_chat_id. Токен берётся у @BotFather, id чата — у @userinfobot.",
+  "telegram": {
+    "bot_token": "",
+    "admin_chat_id": ""
+  },
+  "trading": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT"
+    ],
+    "timeframes": [
+      "2h",
+      "4h",
+      "6h",
+      "12h"
+    ],
+    "ote": 0.79,
+    "min_stop_percent": 0.7,
+    "risk_percent_per_trade": 0.5,
+    "max_open_positions": 10,
+    "tp1_R": 1.5,
+    "tp2_R": 3.0
+  },
+  "runtime": {
+    "poll_seconds": 120,
+    "notify_on_fill": true,
+    "autostart": true
+  }
+}

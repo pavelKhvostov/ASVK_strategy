@@ -1,0 +1,8 @@
+# секреты: содержит токен Telegram-бота и id чата
+config.json
+
+# рантайм-файлы, создаются раннером
+live_state.json
+arden_live.log
+dashboard.html
+__pycache__/
